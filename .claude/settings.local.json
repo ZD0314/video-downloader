@@ -17,7 +17,14 @@
       "Bash(python -m pytest tests/ui/test_download_list.py -v)",
       "Bash(python src/main.py)",
       "Bash(python -c \"from src.ui.main_window import MainWindow; print\\(''Import successful''\\)\")",
-      "Bash(python -m pytest tests/ui/test_settings_panel.py -v)"
+      "Bash(python -m pytest tests/ui/test_settings_panel.py -v)",
+      "Bash(python -c \"from PyQt6.QtWidgets import QStyle; print\\([attr for attr in dir\\(QStyle\\) if ''SP_'' in attr][:10]\\)\")",
+      "Bash(python -c \"from PyQt6.QtWidgets import QStyle; print\\([attr for attr in dir\\(QStyle\\) if not attr.startswith\\(''_''\\)][:30]\\)\")",
+      "Bash(python -c \"from PyQt6.QtWidgets import QStyle; print\\([attr for attr in dir\\(QStyle.StandardPixmap\\) if not attr.startswith\\(''_''\\)][:20]\\)\")",
+      "Bash(python -m pytest tests/ui/test_ui_integration.py -v)",
+      "Bash(pytest tests/ui/ -v)",
+      "Bash(python -m pytest tests/ui/ -v)",
+      "Bash(echo \"Exit code: $?\")"
     ]
   }
 }
