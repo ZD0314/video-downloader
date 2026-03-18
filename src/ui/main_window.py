@@ -1,7 +1,7 @@
 # src/ui/main_window.py
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QStatusBar, QMenuBar, QMenu, QToolBar
+    QStatusBar, QMenuBar, QMenu, QToolBar, QStyle
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
@@ -20,6 +20,9 @@ class MainWindow(QMainWindow):
         """初始化UI"""
         self.setWindowTitle("视频下载器")
         self.setGeometry(100, 100, 900, 700)
+
+        # 设置应用图标（使用Qt内置图标）
+        self.setWindowIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
 
         # 创建中央部件
         central_widget = QWidget()
