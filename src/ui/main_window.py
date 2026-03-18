@@ -1,11 +1,12 @@
 # src/ui/main_window.py
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QTextEdit,
     QStatusBar, QMenuBar, QMenu, QToolBar
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
+from src.ui.url_input_widget import UrlInputWidget
+from src.ui.download_list import DownloadListWidget
 
 
 class MainWindow(QMainWindow):
@@ -27,27 +28,24 @@ class MainWindow(QMainWindow):
         # 主布局
         layout = QVBoxLayout(central_widget)
 
-        # URL输入区域
-        url_layout = QHBoxLayout()
-        url_label = QLabel("视频URL:")
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("输入视频URL，支持YouTube、Bilibili等")
-        self.download_btn = QPushButton("下载")
-        url_layout.addWidget(url_label)
-        url_layout.addWidget(self.url_input)
-        url_layout.addWidget(self.download_btn)
-        layout.addLayout(url_layout)
+        # URL输入区域 (替换原来的简单实现)
+        self.url_input_widget = UrlInputWidget()
+        layout.addWidget(self.url_input_widget)
 
-        # 下载列表区域
-        self.download_list = QTextEdit()
-        self.download_list.setReadOnly(True)
-        self.download_list.setPlaceholderText("下载列表将显示在这里...")
-        layout.addWidget(self.download_list)
+        # 下载列表区域 (替换原来的QTextEdit)
+        self.download_list_widget = DownloadListWidget()
+        layout.addWidget(self.download_list_widget)
 
         # 状态栏
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("就绪")
+
+        # 连接信号
+        self.url_input_widget.download_requested.connect(self.on_download_requested)
+        self.download_list_widget.task_pause_requested.connect(self.on_task_pause)
+        self.download_list_widget.task_resume_requested.connect(self.on_task_resume)
+        self.download_list_widget.task_cancel_requested.connect(self.on_task_cancel)
 
         # 菜单栏
         self.init_menu_bar()
@@ -91,3 +89,20 @@ class MainWindow(QMainWindow):
 
         cancel_action = QAction("取消", self)
         toolbar.addAction(cancel_action)
+
+    def on_download_requested(self, url: str):
+        """处理下载请求"""
+        self.status_bar.showMessage(f"开始下载: {url}")
+        # TODO: 调用下载管理器
+
+    def on_task_pause(self, task):
+        """处理任务暂停"""
+        pass
+
+    def on_task_resume(self, task):
+        """处理任务恢复"""
+        pass
+
+    def on_task_cancel(self, task):
+        """处理任务取消"""
+        pass
