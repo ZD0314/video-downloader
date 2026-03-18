@@ -3,7 +3,18 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(pytest tests/ui/test_main_window.py -v)",
+      "Bash(pip --version)",
+      "Bash(python -m pip --version)",
+      "Bash(python -m pip install pytest pytest-qt PyQt6)",
+      "Bash(python -m pip install PyQt6 pytest pytest-qt)",
+      "Bash(python -c \"import PyQt6; print\\(''PyQt6 is installed''\\)\")",
+      "Bash(python -m pip install --index-url https://pypi.tuna.tsinghua.edu.cn/simple PyQt6 pytest pytest-qt)",
+      "Bash(python -m pytest tests/ui/test_main_window.py -v)",
+      "Bash(python -m pytest tests/ui/test_url_input_widget.py -v)",
+      "Bash(python -m pytest tests/ui/test_download_item_widget.py -v)",
+      "Bash(python -m pytest tests/ui/test_download_list.py -v)"
     ]
   }
 }
