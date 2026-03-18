@@ -14,7 +14,10 @@
       "Bash(python -m pytest tests/ui/test_main_window.py -v)",
       "Bash(python -m pytest tests/ui/test_url_input_widget.py -v)",
       "Bash(python -m pytest tests/ui/test_download_item_widget.py -v)",
-      "Bash(python -m pytest tests/ui/test_download_list.py -v)"
+      "Bash(python -m pytest tests/ui/test_download_list.py -v)",
+      "Bash(python src/main.py)",
+      "Bash(python -c \"from src.ui.main_window import MainWindow; print\\(''Import successful''\\)\")",
+      "Bash(python -m pytest tests/ui/test_settings_panel.py -v)"
     ]
   }
 }
