@@ -80,6 +80,8 @@ class DownloadManager(QObject):
                 return False
             worker = self._workers[task_id]
             worker.cancel()
+            # 从工作线程字典中移除
+            del self._workers[task_id]
             if task_id in self._tasks:
                 self._tasks[task_id].status = DownloadStatus.PAUSED
 
@@ -123,6 +125,8 @@ class DownloadManager(QObject):
                 return False
             worker = self._workers[task_id]
             worker.cancel()
+            # 从工作线程字典中移除
+            del self._workers[task_id]
             if task_id in self._tasks:
                 self._tasks[task_id].status = DownloadStatus.CANCELLED
 

@@ -2,17 +2,18 @@
 import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QStatusBar, QMenuBar, QMenu, QToolBar, QStyle
+    QStatusBar, QMenuBar, QMenu, QToolBar, QStyle, QDialog
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from src.ui.url_input_widget import UrlInputWidget
 from src.ui.download_list import DownloadListWidget
-from src.ui.settings_panel import SettingsPanel
+from src.ui.settings_dialog import SettingsDialog
 from src.models.download_task import DownloadTask
 from src.services.yt_dlp_wrapper import YTDLPWrapper
 from src.services.video_parser import VideoParser
 from src.services.download_manager import DownloadManager
+from src.services.config_manager import ConfigManager
 
 
 class MainWindow(QMainWindow):
@@ -21,13 +22,16 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # 创建配置管理器
+        self.config_manager = ConfigManager()
+
         # 创建服务层组件
         self.ytdlp_wrapper = YTDLPWrapper()
         self.video_parser = VideoParser(self.ytdlp_wrapper)
         self.download_manager = DownloadManager()
 
-        # 默认下载路径
-        self._download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        # 从配置加载下载路径
+        self._download_path = self.config_manager.get("download_path", os.path.join(os.path.expanduser("~"), "Downloads"))
 
         # 连接信号
         self.download_manager.task_started.connect(self.on_task_started)
@@ -60,11 +64,6 @@ class MainWindow(QMainWindow):
         self.download_list_widget = DownloadListWidget()
         layout.addWidget(self.download_list_widget)
 
-        # 设置面板
-        self.settings_panel = SettingsPanel()
-        self.settings_panel.settings_changed.connect(self.on_settings_changed)
-        layout.addWidget(self.settings_panel)
-
         # 状态栏
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -88,6 +87,12 @@ class MainWindow(QMainWindow):
 
         # 文件菜单
         file_menu = menubar.addMenu("文件")
+
+        settings_action = QAction("下载设置...", self)
+        settings_action.triggered.connect(self.on_settings_clicked)
+        file_menu.addAction(settings_action)
+
+        file_menu.addSeparator()
 
         exit_action = QAction("退出", self)
         exit_action.triggered.connect(self.close)
@@ -159,6 +164,25 @@ class MainWindow(QMainWindow):
     def on_task_failed(self, task_id: str, error_message: str):
         """下载失败"""
         self.status_bar.showMessage(f"下载失败: {error_message}")
+
+    def on_settings_clicked(self):
+        """处理设置菜单点击"""
+        # 创建设置对话框
+        dialog = SettingsDialog(self)
+
+        # 设置当前配置
+        current_settings = self.config_manager.get_all()
+        dialog.set_settings(current_settings)
+
+        # 连接信号
+        dialog.settings_changed.connect(self.on_settings_changed)
+
+        # 显示对话框
+        if dialog.exec() == QDialog.Accepted:
+            # 保存设置
+            settings = dialog.get_settings()
+            self.config_manager.update(settings)
+            self.on_settings_changed(settings)
 
     def on_settings_changed(self, settings: dict):
         """处理设置变化"""
