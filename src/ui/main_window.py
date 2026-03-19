@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from src.ui.url_input_widget import UrlInputWidget
 from src.ui.download_list import DownloadListWidget
+from src.models.download_task import DownloadTask
 from src.services.yt_dlp_wrapper import YTDLPWrapper
 from src.services.video_parser import VideoParser
 from src.services.download_manager import DownloadManager
@@ -115,19 +116,25 @@ class MainWindow(QMainWindow):
     def on_download_requested(self, url: str):
         """处理下载请求"""
         self.status_bar.showMessage(f"开始下载: {url}")
-        # TODO: 调用下载管理器
+
+        # 创建下载任务并添加到UI列表
+        task = DownloadTask(url=url, title=url)
+        self.download_list_widget.add_task(task)
+
+        # 调用下载管理器开始下载
+        self.download_manager.add_task(url, self._download_path)
 
     def on_task_pause(self, task):
         """处理任务暂停"""
-        pass
+        self.download_manager.pause_task(task.url)
 
     def on_task_resume(self, task):
         """处理任务恢复"""
-        pass
+        self.download_manager.resume_task(task.url)
 
     def on_task_cancel(self, task):
         """处理任务取消"""
-        pass
+        self.download_manager.cancel_task(task.url)
 
     def on_task_started(self, task_id: str):
         """任务开始"""
