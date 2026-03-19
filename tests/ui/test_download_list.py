@@ -19,3 +19,16 @@ def test_download_list_add_task(app):
     task = DownloadTask(url="https://example.com/video.mp4", title="测试视频")
     widget.add_task(task)
     assert widget.count() == 1
+
+def test_update_progress(app):
+    """测试更新进度"""
+    widget = DownloadListWidget()
+    task = DownloadTask(url="https://test.com/video", title="Test")
+    widget.add_task(task)
+
+    widget.update_progress("https://test.com/video", 1024, 2048, "1.0 KB/s")
+
+    assert task.downloaded_size == 1024
+    assert task.total_size == 2048
+    assert task.speed == "1.0 KB/s"
+    assert task.progress == 50

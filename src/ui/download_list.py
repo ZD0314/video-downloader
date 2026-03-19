@@ -71,3 +71,25 @@ class DownloadListWidget(QWidget):
     def on_task_cancel(self, task: DownloadTask):
         """处理任务取消请求"""
         self.task_cancel_requested.emit(task)
+
+    def update_progress(self, task_id: str, downloaded: int, total: int, speed: str):
+        """更新任务进度"""
+        for task in self.tasks:
+            if task.url == task_id:
+                task.downloaded_size = downloaded
+                task.total_size = total
+                task.speed = speed
+                if total > 0:
+                    task.progress = int(downloaded * 100 / total)
+                self._update_item_widget(task)
+                break
+
+    def _update_item_widget(self, task: DownloadTask):
+        """更新下载项组件"""
+        for i in range(self.content_layout.count()):
+            item = self.content_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if isinstance(widget, DownloadItemWidget) and widget.task == task:
+                    widget.update_progress(task.progress, task.total_size)
+                    break
