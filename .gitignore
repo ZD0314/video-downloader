@@ -56,3 +56,6 @@ htmlcov/
 # Windows
 Thumbs.db
 desktop.ini
+
+# Git Worktrees
+.worktrees/
