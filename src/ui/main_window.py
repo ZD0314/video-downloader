@@ -9,7 +9,7 @@ from PyQt6.QtGui import QAction, QIcon
 from src.ui.url_input_widget import UrlInputWidget
 from src.ui.download_list import DownloadListWidget
 from src.ui.settings_dialog import SettingsDialog
-from src.models.download_task import DownloadTask
+from src.models.download_task import DownloadTask, DownloadStatus
 from src.services.yt_dlp_wrapper import YTDLPWrapper
 from src.services.video_parser import VideoParser
 from src.services.download_manager import DownloadManager
@@ -38,6 +38,8 @@ class MainWindow(QMainWindow):
         self.download_manager.task_progress.connect(self.on_task_progress)
         self.download_manager.task_completed.connect(self.on_task_completed)
         self.download_manager.task_failed.connect(self.on_task_failed)
+        self.download_manager.task_paused.connect(self.on_task_paused)
+        self.download_manager.task_cancelled.connect(self.on_task_cancelled)
 
         self.init_ui()
 
@@ -169,6 +171,26 @@ class MainWindow(QMainWindow):
         """下载失败"""
         self.status_bar.showMessage(f"下载失败: {error_message}")
 
+    def on_task_paused(self, task_id: str):
+        """任务暂停"""
+        self.status_bar.showMessage(f"任务已暂停: {task_id}")
+        # 更新UI状态
+        for task in self.download_list_widget.tasks:
+            if task.task_id == task_id:
+                task.status = DownloadStatus.PAUSED
+                self.download_list_widget._update_item_widget_status(task)
+                break
+
+    def on_task_cancelled(self, task_id: str):
+        """任务取消"""
+        self.status_bar.showMessage(f"任务已取消: {task_id}")
+        # 更新UI状态
+        for task in self.download_list_widget.tasks:
+            if task.task_id == task_id:
+                task.status = DownloadStatus.CANCELLED
+                self.download_list_widget._update_item_widget_status(task)
+                break
+
     def on_settings_clicked(self):
         """处理设置菜单点击"""
         # 创建设置对话框
@@ -178,12 +200,18 @@ class MainWindow(QMainWindow):
         current_settings = self.config_manager.get_all()
         dialog.set_settings(current_settings)
 
+        # 连接信号
+        dialog.settings_saved.connect(self.on_settings_saved)
+
         # 显示对话框
-        if dialog.exec() == QDialog.Accepted:
-            # 保存设置
-            settings = dialog.get_settings()
-            self.config_manager.update(settings)
-            self.on_settings_changed(settings)
+        dialog.exec()
+
+    def on_settings_saved(self, settings: dict):
+        """处理设置保存"""
+        # 保存设置到配置管理器
+        self.config_manager.update(settings)
+        # 应用设置
+        self.on_settings_changed(settings)
 
     def on_settings_changed(self, settings: dict):
         """处理设置变化"""

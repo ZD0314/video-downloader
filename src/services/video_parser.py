@@ -39,8 +39,30 @@ class VideoParser:
 
     def parse_playlist(self, url: str) -> List[VideoInfo]:
         """解析播放列表"""
-        # TODO: 实现播放列表解析
-        return [self.parse(url)]
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,  # 只获取列表元数据，不下载
+        }
+        import yt_dlp
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        if not info:
+            return []
+        # 单个视频
+        if info.get('_type') != 'playlist':
+            return [self.parse(url)]
+        # 播放列表
+        entries = info.get('entries') or []
+        results = []
+        for entry in entries:
+            entry_url = entry.get('url') or entry.get('webpage_url')
+            if entry_url:
+                try:
+                    results.append(self.parse(entry_url))
+                except Exception:
+                    pass
+        return results
 
     def get_formats(self, url: str) -> List[FormatInfo]:
         """获取可用格式列表"""

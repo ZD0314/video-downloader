@@ -12,6 +12,7 @@ class DownloadListWidget(QWidget):
     task_pause_requested = pyqtSignal(object)
     task_resume_requested = pyqtSignal(object)
     task_cancel_requested = pyqtSignal(object)
+    task_remove_requested = pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -63,20 +64,53 @@ class DownloadListWidget(QWidget):
     def on_task_pause(self, task: DownloadTask):
         """处理任务暂停请求"""
         self.task_pause_requested.emit(task)
+        # 更新UI状态
+        self._update_item_widget_status(task)
 
     def on_task_resume(self, task: DownloadTask):
         """处理任务恢复请求"""
         self.task_resume_requested.emit(task)
+        # 更新UI状态
+        self._update_item_widget_status(task)
 
     def on_task_cancel(self, task: DownloadTask):
         """处理任务取消请求"""
         self.task_cancel_requested.emit(task)
+        # 从列表中移除该任务的 widget
+        self.remove_task(task)
+
+    def remove_task(self, task: DownloadTask):
+        """从列表中移除任务"""
+        for i in range(self.content_layout.count()):
+            item = self.content_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if isinstance(widget, DownloadItemWidget) and widget.task is task:
+                    self.content_layout.removeWidget(widget)
+                    widget.deleteLater()
+                    break
+        if task in self.tasks:
+            self.tasks.remove(task)
+        if len(self.tasks) == 0:
+            self.empty_label.show()
+
+    def _update_item_widget_status(self, task: DownloadTask):
+        """更新下载项组件的状态"""
+        for i in range(self.content_layout.count()):
+            item = self.content_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if isinstance(widget, DownloadItemWidget) and widget.task is task:
+                    widget.update_status_only()
+                    break
 
     def update_progress(self, task_id: str, downloaded: int, total: int, speed: str):
         """更新任务进度"""
         for task in self.tasks:
             if task.task_id == task_id:
-                task.status = DownloadStatus.DOWNLOADING
+                # 只有在下载中时才更新状态为 DOWNLOADING
+                if task.status != DownloadStatus.PAUSED:
+                    task.status = DownloadStatus.DOWNLOADING
                 task.downloaded_size = downloaded
                 task.total_size = total
                 task.speed = speed

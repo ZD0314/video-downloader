@@ -80,7 +80,6 @@ class DownloadManager(QObject):
                 return False
             worker = self._workers[task_id]
             worker.cancel()
-            # 从工作线程字典中移除
             del self._workers[task_id]
             if task_id in self._tasks:
                 self._tasks[task_id].status = DownloadStatus.PAUSED
@@ -100,7 +99,10 @@ class DownloadManager(QObject):
                 return False
 
             params = self._task_params[task_id]
+            # 重置任务状态为等待中，准备重新下载
             task.status = DownloadStatus.WAITING
+            # 清除之前的文件路径，重新开始下载
+            task.file_path = ""
 
         worker = DownloadWorker(
             task_id=task_id,
@@ -115,22 +117,60 @@ class DownloadManager(QObject):
             self._workers[task_id] = worker
 
         self._thread_pool.start(worker)
-        self.task_started.emit(task_id)
         return True
 
     def cancel_task(self, task_id: str) -> bool:
         """取消任务"""
+        import os
+        import threading
+
+        output_path = None
+        file_to_delete = None
+
         with QMutexLocker(self._mutex):
-            if task_id not in self._workers:
+            if task_id not in self._tasks:
                 return False
-            worker = self._workers[task_id]
-            worker.cancel()
-            # 从工作线程字典中移除
-            del self._workers[task_id]
-            if task_id in self._tasks:
-                self._tasks[task_id].status = DownloadStatus.CANCELLED
+            task = self._tasks[task_id]
+            # 如果还在下载，先停止 worker
+            if task_id in self._workers:
+                worker = self._workers[task_id]
+                output_path = worker.output_path
+                file_to_delete = worker.get_file_path() or task.file_path
+                worker.cancel()
+                del self._workers[task_id]
+            else:
+                # 已暂停状态，直接取文件路径
+                file_to_delete = task.file_path
+                if task_id in self._task_params:
+                    output_path = self._task_params[task_id].get('output_path')
+            task.status = DownloadStatus.CANCELLED
+            if not file_to_delete:
+                file_to_delete = task.file_path
 
         self.task_cancelled.emit(task_id)
+
+        def _delete_files():
+            import time
+            time.sleep(1.5)
+            # 删除 .part 和临时文件
+            if output_path and os.path.exists(output_path):
+                for filename in os.listdir(output_path):
+                    if filename.endswith('.part') or filename.startswith(f"temp_{task_id}"):
+                        try:
+                            os.remove(os.path.join(output_path, filename))
+                            logger.info(f"已删除文件: {filename}")
+                        except Exception as e:
+                            logger.warning(f"删除失败 {filename}: {e}")
+            # 删除已知文件路径（同时尝试带和不带 .part 后缀）
+            for path in [file_to_delete, file_to_delete + ".part" if file_to_delete else None]:
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                        logger.info(f"已删除: {path}")
+                    except Exception as e:
+                        logger.warning(f"删除失败 {path}: {e}")
+
+        threading.Thread(target=_delete_files, daemon=True).start()
         return True
 
     def get_task(self, task_id: str) -> Optional[DownloadTask]:
@@ -176,12 +216,21 @@ class DownloadManager(QObject):
 
         self.task_failed.emit(task_id, error_message)
 
-    @pyqtSlot(str)
-    def _on_started(self, task_id: str):
+    @pyqtSlot(str, str)
+    def _on_started(self, task_id: str, file_path: str):
         """开始回调"""
         with QMutexLocker(self._mutex):
             if task_id in self._tasks:
                 self._tasks[task_id].status = DownloadStatus.DOWNLOADING
+                self._tasks[task_id].file_path = file_path
+
+    @pyqtSlot(str, str)
+    def _update_file_path(self, task_id: str, file_path: str):
+        """更新文件路径回调"""
+        with QMutexLocker(self._mutex):
+            if task_id in self._tasks:
+                self._tasks[task_id].file_path = file_path
+                logger.debug(f"更新任务 {task_id} 的文件路径为: {file_path}")
 
 
 class DownloadWorker(QRunnable):
@@ -204,16 +253,23 @@ class DownloadWorker(QRunnable):
         self.wrapper = wrapper
         self.manager = manager
         self._cancelled = False
+        self._current_file_path = ""
+        self._file_path_mutex = QMutex()
         self.setAutoDelete(True)
 
     def run(self):
         """执行下载"""
         try:
+            # 构建文件路径（用于取消时删除）
+            import os
+            temp_file_path = os.path.join(self.output_path, f"temp_{self.task_id}")
+
             # 更新任务状态为下载中
             QMetaObject.invokeMethod(
                 self.manager, "_on_started",
                 Qt.ConnectionType.QueuedConnection,
-                Q_ARG(str, self.task_id)
+                Q_ARG(str, self.task_id),
+                Q_ARG(str, temp_file_path)
             )
             # 发射任务开始信号
             QMetaObject.invokeMethod(
@@ -223,12 +279,30 @@ class DownloadWorker(QRunnable):
             )
 
             def on_progress(data):
+                # 先更新文件路径，再检查取消状态
+                # 这样即使在取消时也能记录文件路径
+                filename = data.get('filename', '')
+                if filename:
+                    # 不检查文件是否存在，直接更新路径
+                    # 因为 .part 文件可能刚创建，检查存在性可能导致路径未被记录
+                    QMetaObject.invokeMethod(
+                        self.manager, "_update_file_path",
+                        Qt.ConnectionType.QueuedConnection,
+                        Q_ARG(str, self.task_id),
+                        Q_ARG(str, filename)
+                    )
+                    # 同时更新本地的文件路径
+                    self.set_file_path(filename)
+
                 if self._cancelled:
                     raise YTDLPError("下载已取消")
 
                 downloaded = data.get('downloaded_bytes', 0)
                 total = data.get('total_bytes', 0)
-                speed = self._format_speed(data.get('speed', 0))
+                speed_value = data.get('speed')
+                if speed_value is None:
+                    speed_value = 0
+                speed = self._format_speed(speed_value)
 
                 QMetaObject.invokeMethod(
                     self.manager, "_on_progress",
@@ -275,8 +349,20 @@ class DownloadWorker(QRunnable):
         """标记取消"""
         self._cancelled = True
 
+    def get_file_path(self) -> str:
+        """获取当前文件路径"""
+        with QMutexLocker(self._file_path_mutex):
+            return self._current_file_path
+
+    def set_file_path(self, file_path: str):
+        """设置当前文件路径"""
+        with QMutexLocker(self._file_path_mutex):
+            self._current_file_path = file_path
+
     def _format_speed(self, speed_bytes: float) -> str:
         """格式化下载速度"""
+        if speed_bytes is None or speed_bytes < 0:
+            speed_bytes = 0
         if speed_bytes < 1024:
             return f"{speed_bytes:.0f} B/s"
         elif speed_bytes < 1024 * 1024:

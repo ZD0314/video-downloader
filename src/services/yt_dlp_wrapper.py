@@ -95,13 +95,15 @@ class YTDLPWrapper:
     ) -> str:
         """下载视频"""
         def progress_hook(d):
-            if progress_callback and d['status'] == 'downloading':
+            if progress_callback:
+                # 在所有状态下都提供文件名信息
                 progress_callback({
                     'downloaded_bytes': d.get('downloaded_bytes', 0),
                     'total_bytes': d.get('total_bytes', 0),
                     'speed': d.get('speed', 0),
                     'eta': d.get('eta', 0),
-                    'filename': d.get('filename', '')
+                    'filename': d.get('filename', ''),
+                    'status': d.get('status', '')
                 })
 
         ydl_opts = {
@@ -118,6 +120,7 @@ class YTDLPWrapper:
                 return ydl.prepare_filename(info)
         except yt_dlp.utils.DownloadError as e:
             self._handle_download_error(e)
+            raise YTDLPError(f"下载失败: {e}")
 
     def _handle_download_error(self, error: Exception) -> None:
         """处理下载错误"""

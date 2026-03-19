@@ -104,7 +104,7 @@ class DownloadItemWidget(QWidget):
             }
         """)
 
-        self.resume_btn = QPushButton("恢复")
+        self.resume_btn = QPushButton("继续下载")
         self.resume_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2196f3;
@@ -266,9 +266,20 @@ class DownloadItemWidget(QWidget):
 
     def update_progress(self, progress: int, total: int):
         """更新进度"""
-        self.task.progress = progress
-        self.task.total_size = total
-        self.progress_bar.setValue(progress)
+        # 只有在下载中状态时才更新进度和进度条
+        if self.task.status == DownloadStatus.DOWNLOADING:
+            self.task.progress = progress
+            self.task.total_size = total
+            self.progress_bar.setValue(progress)
+
+        # 总是更新状态标签和详细信息（包括暂停状态）
+        self.status_badge.setText(self.get_status_text())
+        self.detail_label.setText(self.get_detail_text())
+        self.update_button_states()
+        self.update_status_color()
+
+    def update_status_only(self):
+        """只更新状态（用于暂停/恢复后）"""
         self.status_badge.setText(self.get_status_text())
         self.detail_label.setText(self.get_detail_text())
         self.update_button_states()
@@ -283,5 +294,22 @@ class DownloadItemWidget(QWidget):
         self.resume_requested.emit(self.task)
 
     def on_cancel_clicked(self):
-        """取消按钮点击"""
-        self.cancel_requested.emit(self.task)
+        """取消按钮点击：先暂停，弹确认框，确认后取消并删除"""
+        from PyQt6.QtWidgets import QMessageBox
+        # 如果正在下载，先暂停
+        was_downloading = self.task.status == DownloadStatus.DOWNLOADING
+        if was_downloading:
+            self.pause_requested.emit(self.task)
+        # 弹确认框
+        reply = QMessageBox.question(
+            self,
+            "确认取消",
+            f"确定要取消下载并删除任务吗？\n{self.task.title}",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.cancel_requested.emit(self.task)
+        elif was_downloading:
+            # 用户选择不取消，恢复下载
+            self.resume_requested.emit(self.task)

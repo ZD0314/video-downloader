@@ -24,3 +24,4 @@ class DownloadTask:
     downloaded_size: int = 0
     speed: str = ""
     error_message: str = ""
+    file_path: str = ""  # 下载文件路径
