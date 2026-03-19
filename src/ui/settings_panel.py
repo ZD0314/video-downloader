@@ -3,14 +3,10 @@ from PyQt6.QtWidgets import (
     QLineEdit, QSpinBox, QComboBox, QCheckBox,
     QPushButton, QGroupBox, QFileDialog
 )
-from PyQt6.QtCore import pyqtSignal
 
 
 class SettingsPanel(QWidget):
     """设置面板组件"""
-
-    # 信号
-    settings_changed = pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,27 +77,8 @@ class SettingsPanel(QWidget):
 
         layout.addWidget(ui_group)
 
-        # 保存按钮
-        save_layout = QHBoxLayout()
-        save_layout.addStretch()
-        self.save_btn = QPushButton("保存设置")
-        self.save_btn.clicked.connect(self.on_save_settings)
-        save_layout.addWidget(self.save_btn)
-        layout.addLayout(save_layout)
-
     def on_browse_path(self):
         """浏览下载路径"""
         path = QFileDialog.getExistingDirectory(self, "选择下载路径")
         if path:
             self.path_input.setText(path)
-
-    def on_save_settings(self):
-        """保存设置"""
-        settings = {
-            "download_path": self.path_input.text(),
-            "default_quality": self.quality_combo.currentText(),
-            "default_format": self.format_combo.currentText(),
-            "concurrent_downloads": self.concurrent_spin.value(),
-            "theme": self.theme_combo.currentText()
-        }
-        self.settings_changed.emit(settings)

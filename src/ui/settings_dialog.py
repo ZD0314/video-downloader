@@ -1,13 +1,10 @@
 """设置对话框"""
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton
-from PyQt6.QtCore import pyqtSignal
 from src.ui.settings_panel import SettingsPanel
 
 
 class SettingsDialog(QDialog):
     """设置对话框"""
-
-    settings_changed = pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,7 +18,6 @@ class SettingsDialog(QDialog):
 
         # 设置面板
         self.settings_panel = SettingsPanel()
-        self.settings_panel.settings_changed.connect(self.on_settings_changed)
         layout.addWidget(self.settings_panel)
 
         # 按钮区域
@@ -37,10 +33,6 @@ class SettingsDialog(QDialog):
         button_layout.addWidget(self.cancel_btn)
 
         layout.addLayout(button_layout)
-
-    def on_settings_changed(self, settings: dict):
-        """处理设置变化"""
-        self.settings_changed.emit(settings)
 
     def set_settings(self, settings: dict):
         """设置当前配置"""

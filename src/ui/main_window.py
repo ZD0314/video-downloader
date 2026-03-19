@@ -41,6 +41,10 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
 
+        # 应用保存的主题
+        theme = self.config_manager.get("theme", "浅色")
+        self.apply_theme(theme)
+
     def init_ui(self):
         """初始化UI"""
         self.setWindowTitle("视频下载器")
@@ -174,9 +178,6 @@ class MainWindow(QMainWindow):
         current_settings = self.config_manager.get_all()
         dialog.set_settings(current_settings)
 
-        # 连接信号
-        dialog.settings_changed.connect(self.on_settings_changed)
-
         # 显示对话框
         if dialog.exec() == QDialog.Accepted:
             # 保存设置
@@ -190,3 +191,64 @@ class MainWindow(QMainWindow):
         if settings.get("download_path"):
             self._download_path = settings["download_path"]
             self.status_bar.showMessage(f"下载路径已更新: {self._download_path}")
+
+        # 应用主题
+        if settings.get("theme"):
+            self.apply_theme(settings["theme"])
+
+    def apply_theme(self, theme: str):
+        """应用主题"""
+        if theme == "深色":
+            # 深色主题样式
+            dark_style = """
+                QMainWindow {
+                    background-color: #2d2d2d;
+                    color: #ffffff;
+                }
+                QWidget {
+                    background-color: #2d2d2d;
+                    color: #ffffff;
+                }
+                QGroupBox {
+                    border: 1px solid #555;
+                    border-radius: 5px;
+                    margin-top: 1ex;
+                    color: #ffffff;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    subcontrol-position: top center;
+                    padding: 0 5px;
+                    color: #ffffff;
+                }
+                QLineEdit, QComboBox, QSpinBox {
+                    background-color: #3d3d3d;
+                    color: #ffffff;
+                    border: 1px solid #555;
+                    border-radius: 3px;
+                    padding: 5px;
+                }
+                QPushButton {
+                    background-color: #3d3d3d;
+                    color: #ffffff;
+                    border: 1px solid #555;
+                    border-radius: 3px;
+                    padding: 5px 10px;
+                }
+                QPushButton:hover {
+                    background-color: #4d4d4d;
+                }
+                QProgressBar {
+                    border: 1px solid #555;
+                    border-radius: 3px;
+                    text-align: center;
+                }
+                QProgressBar::chunk {
+                    background-color: #4caf50;
+                }
+            """
+            self.setStyleSheet(dark_style)
+        else:
+            # 浅色主题（默认）
+            self.setStyleSheet("")
+        self.status_bar.showMessage(f"主题已切换为: {theme}")
