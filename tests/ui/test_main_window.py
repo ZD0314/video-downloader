@@ -18,3 +18,18 @@ def test_main_window_initial_size(app):
     window = MainWindow()
     assert window.width() >= 800
     assert window.height() >= 600
+
+def test_main_window_has_services(app):
+    """测试主窗口包含服务层组件"""
+    window = MainWindow()
+    assert hasattr(window, 'ytdlp_wrapper')
+    assert hasattr(window, 'video_parser')
+    assert hasattr(window, 'download_manager')
+    assert hasattr(window, '_download_path')
+
+def test_main_window_signals_connected(app):
+    """测试信号连接"""
+    window = MainWindow()
+    # 验证信号已连接
+    assert window.download_manager.receivers(window.download_manager.task_started) > 0
+    assert window.download_manager.receivers(window.download_manager.task_completed) > 0

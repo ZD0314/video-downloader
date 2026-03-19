@@ -1,4 +1,5 @@
 # src/ui/main_window.py
+import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QStatusBar, QMenuBar, QMenu, QToolBar, QStyle
@@ -7,6 +8,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from src.ui.url_input_widget import UrlInputWidget
 from src.ui.download_list import DownloadListWidget
+from src.services.yt_dlp_wrapper import YTDLPWrapper
+from src.services.video_parser import VideoParser
+from src.services.download_manager import DownloadManager
 
 
 class MainWindow(QMainWindow):
@@ -14,6 +18,21 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+
+        # 创建服务层组件
+        self.ytdlp_wrapper = YTDLPWrapper()
+        self.video_parser = VideoParser(self.ytdlp_wrapper)
+        self.download_manager = DownloadManager()
+
+        # 默认下载路径
+        self._download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+
+        # 连接信号
+        self.download_manager.task_started.connect(self.on_task_started)
+        self.download_manager.task_progress.connect(self.on_task_progress)
+        self.download_manager.task_completed.connect(self.on_task_completed)
+        self.download_manager.task_failed.connect(self.on_task_failed)
+
         self.init_ui()
 
     def init_ui(self):
@@ -109,3 +128,19 @@ class MainWindow(QMainWindow):
     def on_task_cancel(self, task):
         """处理任务取消"""
         pass
+
+    def on_task_started(self, task_id: str):
+        """任务开始"""
+        self.status_bar.showMessage(f"下载中: {task_id}")
+
+    def on_task_progress(self, task_id: str, downloaded: int, total: int, speed: str):
+        """进度更新"""
+        self.download_list_widget.update_progress(task_id, downloaded, total, speed)
+
+    def on_task_completed(self, task_id: str, file_path: str):
+        """下载完成"""
+        self.status_bar.showMessage(f"下载完成: {file_path}")
+
+    def on_task_failed(self, task_id: str, error_message: str):
+        """下载失败"""
+        self.status_bar.showMessage(f"下载失败: {error_message}")
