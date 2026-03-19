@@ -18,11 +18,11 @@ class NetworkError(YTDLPError):
     """网络错误"""
     pass
 
-class TimeoutError(NetworkError):
+class NetworkTimeoutError(NetworkError):
     """连接超时"""
     pass
 
-class ConnectionError(NetworkError):
+class NetworkConnectionError(NetworkError):
     """连接失败"""
     pass
 
@@ -125,9 +125,9 @@ class YTDLPWrapper:
         if 'not found' in error_msg:
             raise VideoNotFoundError(str(error))
         if 'timeout' in error_msg:
-            raise TimeoutError(str(error))
+            raise NetworkTimeoutError(str(error))
         if 'connection' in error_msg:
-            raise ConnectionError(str(error))
+            raise NetworkConnectionError(str(error))
         if 'no space' in error_msg:
             raise DiskFullError(str(error))
         if 'permission' in error_msg:
@@ -140,7 +140,7 @@ class YTDLPWrapper:
         for attempt in range(self._retry_count + 1):
             try:
                 return func(*args, **kwargs)
-            except (TimeoutError, ConnectionError) as e:
+            except (NetworkTimeoutError, NetworkConnectionError) as e:
                 last_exception = e
                 if attempt < self._retry_count:
                     delay = self._retry_delay * (2 ** attempt)
