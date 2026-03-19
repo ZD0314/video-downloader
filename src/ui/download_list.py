@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
 from src.ui.download_item_widget import DownloadItemWidget
-from src.models.download_task import DownloadTask
+from src.models.download_task import DownloadTask, DownloadStatus
 
 
 class DownloadListWidget(QWidget):
@@ -76,6 +76,7 @@ class DownloadListWidget(QWidget):
         """更新任务进度"""
         for task in self.tasks:
             if task.url == task_id:
+                task.status = DownloadStatus.DOWNLOADING
                 task.downloaded_size = downloaded
                 task.total_size = total
                 task.speed = speed
@@ -90,6 +91,6 @@ class DownloadListWidget(QWidget):
             item = self.content_layout.itemAt(i)
             if item:
                 widget = item.widget()
-                if isinstance(widget, DownloadItemWidget) and widget.task == task:
+                if isinstance(widget, DownloadItemWidget) and widget.task is task:
                     widget.update_progress(task.progress, task.total_size)
                     break
