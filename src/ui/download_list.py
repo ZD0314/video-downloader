@@ -128,3 +128,25 @@ class DownloadListWidget(QWidget):
                 if isinstance(widget, DownloadItemWidget) and widget.task is task:
                     widget.update_progress(task.progress, task.total_size)
                     break
+
+    def get_selected_tasks(self):
+        """获取所有任务（全选用）"""
+        return list(self.tasks)
+
+    def clear_completed(self):
+        """清除已完成任务"""
+        to_remove = [t for t in self.tasks if t.status == DownloadStatus.COMPLETED]
+        for task in to_remove:
+            self.remove_task(task)
+        return len(to_remove)
+
+    def clear_failed(self):
+        """清除失败任务"""
+        to_remove = [t for t in self.tasks if t.status == DownloadStatus.FAILED]
+        for task in to_remove:
+            self.remove_task(task)
+        return len(to_remove)
+
+    def get_urls(self):
+        """获取所有任务的URL列表"""
+        return [t.url for t in self.tasks]

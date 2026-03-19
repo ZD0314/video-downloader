@@ -279,37 +279,32 @@ class DownloadWorker(QRunnable):
             )
 
             def on_progress(data):
-                # 先更新文件路径，再检查取消状态
-                # 这样即使在取消时也能记录文件路径
                 filename = data.get('filename', '')
                 if filename:
-                    # 不检查文件是否存在，直接更新路径
-                    # 因为 .part 文件可能刚创建，检查存在性可能导致路径未被记录
                     QMetaObject.invokeMethod(
                         self.manager, "_update_file_path",
                         Qt.ConnectionType.QueuedConnection,
                         Q_ARG(str, self.task_id),
                         Q_ARG(str, filename)
                     )
-                    # 同时更新本地的文件路径
                     self.set_file_path(filename)
 
                 if self._cancelled:
                     raise YTDLPError("下载已取消")
 
-                downloaded = data.get('downloaded_bytes', 0)
-                total = data.get('total_bytes', 0)
-                speed_value = data.get('speed')
-                if speed_value is None:
-                    speed_value = 0
+                status = data.get('status', '')
+                downloaded = data.get('downloaded_bytes', 0) or 0
+                # m3u8 流 total_bytes 可能为 0，用 estimate 备选
+                total = data.get('total_bytes') or data.get('total_bytes_estimate') or 0
+                speed_value = data.get('speed') or 0
                 speed = self._format_speed(speed_value)
 
                 QMetaObject.invokeMethod(
                     self.manager, "_on_progress",
                     Qt.ConnectionType.QueuedConnection,
                     Q_ARG(str, self.task_id),
-                    Q_ARG(int, downloaded),
-                    Q_ARG(int, total),
+                    Q_ARG(int, int(downloaded)),
+                    Q_ARG(int, int(total)),
                     Q_ARG(str, speed)
                 )
 

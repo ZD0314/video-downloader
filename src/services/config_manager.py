@@ -2,7 +2,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
@@ -81,3 +81,37 @@ class ConfigManager(QObject):
     def get_all(self) -> Dict[str, Any]:
         """获取所有配置"""
         return self._config.copy()
+
+    def add_history(self, record: Dict[str, Any]):
+        """添加下载历史记录"""
+        history = self.get_history()
+        history.insert(0, record)
+        # 最多保留500条
+        history = history[:500]
+        try:
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            history_file = self.config_dir / "history.json"
+            with open(history_file, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"保存历史记录失败: {e}")
+
+    def get_history(self) -> List[Dict[str, Any]]:
+        """获取下载历史记录"""
+        history_file = self.config_dir / "history.json"
+        try:
+            if history_file.exists():
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"读取历史记录失败: {e}")
+        return []
+
+    def clear_history(self):
+        """清空历史记录"""
+        history_file = self.config_dir / "history.json"
+        try:
+            if history_file.exists():
+                history_file.unlink()
+        except Exception as e:
+            print(f"清空历史记录失败: {e}")

@@ -94,6 +94,22 @@ class MainWindow(QMainWindow):
         # 文件菜单
         file_menu = menubar.addMenu("文件")
 
+        history_action = QAction("下载记录...", self)
+        history_action.triggered.connect(self.on_history_clicked)
+        file_menu.addAction(history_action)
+
+        file_menu.addSeparator()
+
+        import_action = QAction("导入URL列表...", self)
+        import_action.triggered.connect(self.on_import_urls_clicked)
+        file_menu.addAction(import_action)
+
+        export_action = QAction("导出下载记录...", self)
+        export_action.triggered.connect(self.on_export_history_clicked)
+        file_menu.addAction(export_action)
+
+        file_menu.addSeparator()
+
         settings_action = QAction("下载设置...", self)
         settings_action.triggered.connect(self.on_settings_clicked)
         file_menu.addAction(settings_action)
@@ -107,13 +123,62 @@ class MainWindow(QMainWindow):
         # 编辑菜单
         edit_menu = menubar.addMenu("编辑")
 
+        select_all_action = QAction("全选任务", self)
+        select_all_action.triggered.connect(self.on_select_all)
+        edit_menu.addAction(select_all_action)
+
+        edit_menu.addSeparator()
+
+        clear_completed_action = QAction("清除已完成任务", self)
+        clear_completed_action.triggered.connect(self.on_clear_completed)
+        edit_menu.addAction(clear_completed_action)
+
+        clear_failed_action = QAction("清除失败任务", self)
+        clear_failed_action.triggered.connect(self.on_clear_failed)
+        edit_menu.addAction(clear_failed_action)
+
+        edit_menu.addSeparator()
+
+        copy_urls_action = QAction("复制所有链接", self)
+        copy_urls_action.triggered.connect(self.on_copy_urls)
+        edit_menu.addAction(copy_urls_action)
+
         # 视图菜单
         view_menu = menubar.addMenu("视图")
+
+        theme_menu = view_menu.addMenu("主题")
+        light_action = QAction("浅色", self)
+        light_action.triggered.connect(lambda: self.apply_theme("浅色"))
+        theme_menu.addAction(light_action)
+        dark_action = QAction("深色", self)
+        dark_action.triggered.connect(lambda: self.apply_theme("深色"))
+        theme_menu.addAction(dark_action)
+
+        view_menu.addSeparator()
+
+        self.toolbar_action = QAction("显示工具栏", self)
+        self.toolbar_action.setCheckable(True)
+        self.toolbar_action.setChecked(True)
+        self.toolbar_action.triggered.connect(self.on_toggle_toolbar)
+        view_menu.addAction(self.toolbar_action)
+
+        view_menu.addSeparator()
+
+        filter_menu = view_menu.addMenu("筛选任务")
+        for label, status in [("全部", None), ("下载中", "DOWNLOADING"), ("已完成", "COMPLETED"), ("已暂停", "PAUSED"), ("失败", "FAILED")]:
+            action = QAction(label, self)
+            action.triggered.connect(lambda checked, s=status: self.on_filter_tasks(s))
+            filter_menu.addAction(action)
 
         # 帮助菜单
         help_menu = menubar.addMenu("帮助")
         about_action = QAction("关于", self)
+        about_action.triggered.connect(self.on_about_clicked)
         help_menu.addAction(about_action)
+
+        open_dir_action = QAction("打开下载目录", self)
+        open_dir_action.triggered.connect(self.on_open_download_dir)
+        help_menu.addAction(open_dir_action)
 
     def init_tool_bar(self):
         """初始化工具栏"""
@@ -166,6 +231,23 @@ class MainWindow(QMainWindow):
     def on_task_completed(self, task_id: str, file_path: str):
         """下载完成"""
         self.status_bar.showMessage(f"下载完成: {file_path}")
+        # 更新UI状态
+        for task in self.download_list_widget.tasks:
+            if task.task_id == task_id:
+                task.status = DownloadStatus.COMPLETED
+                task.progress = 100
+                self.download_list_widget._update_item_widget_status(task)
+                break
+        # 保存历史记录
+        task = self.download_manager.get_task(task_id)
+        if task:
+            import datetime
+            self.config_manager.add_history({
+                'title': task.title,
+                'url': task.url,
+                'file_path': file_path,
+                'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
 
     def on_task_failed(self, task_id: str, error_message: str):
         """下载失败"""
@@ -190,6 +272,162 @@ class MainWindow(QMainWindow):
                 task.status = DownloadStatus.CANCELLED
                 self.download_list_widget._update_item_widget_status(task)
                 break
+
+    def on_about_clicked(self):
+        """关于对话框"""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.about(self, "关于视频下载器",
+            "<b>视频下载器 v1.0</b><br><br>"
+            "基于 yt-dlp 的视频下载工具<br>"
+            "支持 YouTube、Bilibili、优酷、爱奇艺等平台<br><br>"
+            "GitHub: <a href='https://github.com/ZD0314/video-downloader'>video-downloader</a>"
+        )
+
+    def on_open_download_dir(self):
+        """打开下载目录"""
+        import subprocess
+        path = self._download_path
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        subprocess.Popen(f'explorer "{path}"')
+
+    def on_toggle_toolbar(self, checked: bool):
+        """显示/隐藏工具栏"""
+        from PyQt6.QtWidgets import QToolBar
+        for tb in self.findChildren(QToolBar):
+            tb.setVisible(checked)
+
+    def on_filter_tasks(self, status_name):
+        """按状态筛选任务列表"""
+        from src.models.download_task import DownloadStatus
+        for i in range(self.download_list_widget.content_layout.count()):
+            item = self.download_list_widget.content_layout.itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                from src.ui.download_item_widget import DownloadItemWidget
+                if isinstance(widget, DownloadItemWidget):
+                    if status_name is None:
+                        widget.setVisible(True)
+                    else:
+                        widget.setVisible(widget.task.status.name == status_name)
+
+    def on_select_all(self):
+        """全选任务"""
+        tasks = self.download_list_widget.get_selected_tasks()
+        self.status_bar.showMessage(f"已选中 {len(tasks)} 个任务")
+
+    def on_clear_completed(self):
+        """清除已完成任务"""
+        count = self.download_list_widget.clear_completed()
+        self.status_bar.showMessage(f"已清除 {count} 个已完成任务")
+
+    def on_clear_failed(self):
+        """清除失败任务"""
+        count = self.download_list_widget.clear_failed()
+        self.status_bar.showMessage(f"已清除 {count} 个失败任务")
+
+    def on_copy_urls(self):
+        """复制所有链接到剪贴板"""
+        from PyQt6.QtWidgets import QApplication
+        urls = self.download_list_widget.get_urls()
+        if not urls:
+            self.status_bar.showMessage("暂无任务链接")
+            return
+        QApplication.clipboard().setText('\n'.join(urls))
+        self.status_bar.showMessage(f"已复制 {len(urls)} 个链接")
+
+    def on_export_history_clicked(self):
+        """导出下载记录为CSV"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import csv
+        history = self.config_manager.get_history()
+        if not history:
+            QMessageBox.information(self, "提示", "暂无下载记录")
+            return
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "导出下载记录", "下载记录.csv", "CSV文件 (*.csv)"
+        )
+        if not file_path:
+            return
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.DictWriter(f, fieldnames=['title', 'url', 'file_path', 'time'])
+                writer.writeheader()
+                writer.writerows(history)
+            self.status_bar.showMessage(f"已导出 {len(history)} 条记录到: {file_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "导出失败", f"导出失败: {e}")
+
+    def on_import_urls_clicked(self):
+        """导入URL列表批量下载"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择URL列表文件", "", "文本文件 (*.txt);;所有文件 (*)"
+        )
+        if not file_path:
+            return
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                urls = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception as e:
+            QMessageBox.warning(self, "读取失败", f"无法读取文件: {e}")
+            return
+        if not urls:
+            QMessageBox.information(self, "提示", "文件中没有有效的URL")
+            return
+        for url in urls:
+            task_id = self.download_manager.add_task(url, self._download_path)
+            task = self.download_manager.get_task(task_id)
+            if task:
+                self.download_list_widget.add_task(task)
+        self.status_bar.showMessage(f"已添加 {len(urls)} 个下载任务")
+
+    def on_history_clicked(self):
+        """打开下载记录对话框"""
+        from PyQt6.QtWidgets import (
+            QDialog, QVBoxLayout, QHBoxLayout, QTableWidget,
+            QTableWidgetItem, QPushButton, QHeaderView
+        )
+        dialog = QDialog(self)
+        dialog.setWindowTitle("下载记录")
+        dialog.resize(700, 450)
+
+        layout = QVBoxLayout(dialog)
+
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["标题", "下载时间", "文件路径", "链接"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+
+        history = self.config_manager.get_history()
+        table.setRowCount(len(history))
+        for row, record in enumerate(history):
+            table.setItem(row, 0, QTableWidgetItem(record.get('title', '')))
+            table.setItem(row, 1, QTableWidgetItem(record.get('time', '')))
+            table.setItem(row, 2, QTableWidgetItem(record.get('file_path', '')))
+            table.setItem(row, 3, QTableWidgetItem(record.get('url', '')))
+
+        layout.addWidget(table)
+
+        btn_layout = QHBoxLayout()
+        clear_btn = QPushButton("清空记录")
+        close_btn = QPushButton("关闭")
+
+        def on_clear():
+            self.config_manager.clear_history()
+            table.setRowCount(0)
+
+        clear_btn.clicked.connect(on_clear)
+        close_btn.clicked.connect(dialog.accept)
+        btn_layout.addWidget(clear_btn)
+        btn_layout.addStretch()
+        btn_layout.addWidget(close_btn)
+        layout.addLayout(btn_layout)
+
+        dialog.exec()
 
     def on_settings_clicked(self):
         """处理设置菜单点击"""

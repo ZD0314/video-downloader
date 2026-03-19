@@ -279,7 +279,9 @@ class DownloadItemWidget(QWidget):
         self.update_status_color()
 
     def update_status_only(self):
-        """只更新状态（用于暂停/恢复后）"""
+        """只更新状态（用于暂停/恢复/完成后）"""
+        if self.task.status == DownloadStatus.COMPLETED:
+            self.progress_bar.setValue(100)
         self.status_badge.setText(self.get_status_text())
         self.detail_label.setText(self.get_detail_text())
         self.update_button_states()

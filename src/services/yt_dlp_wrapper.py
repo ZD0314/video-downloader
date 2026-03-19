@@ -109,6 +109,8 @@ class YTDLPWrapper:
         ydl_opts = {
             'outtmpl': f'{output_path}/%(title)s.%(ext)s',
             'progress_hooks': [progress_hook],
+            'concurrent_fragment_downloads': 12,  # 并发下载分片数
+            'retries': 3,
         }
 
         if format_id:
