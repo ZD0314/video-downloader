@@ -18,7 +18,8 @@
 
 ## 截图
 
-![主界面](image.png)
+<img width="892" height="723" alt="image" src="https://github.com/user-attachments/assets/0db59a6a-008f-4cdb-945a-2cea81b71476" />
+
 
 ## 支持平台
 
