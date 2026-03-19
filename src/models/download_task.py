@@ -9,6 +9,7 @@ class DownloadStatus(Enum):
     PAUSED = "已暂停"
     COMPLETED = "已完成"
     FAILED = "失败"
+    CANCELLED = "已取消"
 
 
 @dataclass
