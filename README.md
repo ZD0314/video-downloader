@@ -1,53 +1,71 @@
 # 视频下载器
 
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)
+![PyQt6](https://img.shields.io/badge/PyQt6-6.6+-green?logo=qt)
+![yt-dlp](https://img.shields.io/badge/yt--dlp-latest-red)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
 基于 [yt-dlp](https://github.com/yt-dlp/yt-dlp) 和 PyQt6 开发的桌面视频下载工具，支持 YouTube、Bilibili、优酷、爱奇艺、腾讯视频等主流平台。
 
-## 功能特性
+[下载 exe](https://github.com/ZD0314/video-downloader/releases) · [报告问题](https://github.com/ZD0314/video-downloader/issues) · [功能建议](https://github.com/ZD0314/video-downloader/issues)
 
-- 支持主流视频平台下载（YouTube、Bilibili、优酷、爱奇艺等）
-- 支持 m3u8/HLS 流媒体下载（并发分片加速）
-- 多任务并发下载
-- 暂停 / 恢复 / 取消下载
-- 下载进度实时显示
-- 下载历史记录（支持导出 CSV）
-- 批量导入 URL 列表
-- 深色 / 浅色主题切换
-- 按状态筛选任务列表
+</div>
+
+---
 
 ## 截图
 
-> 运行 `python src/main.py` 查看效果
+![主界面](image.png)
+
+## 支持平台
+
+| 平台 | 状态 |
+|------|------|
+| YouTube | ✅ |
+| Bilibili | ✅ |
+| 优酷 | ✅ |
+| 爱奇艺 | ✅ |
+| 腾讯视频 | ✅ |
+| m3u8/HLS 流 | ✅ |
+| 其他 yt-dlp 支持的平台 | ✅ |
+
+## 功能特性
+
+- 🚀 多任务并发下载，HLS 流并发分片加速
+- ⏸ 暂停 / 恢复 / 取消下载
+- 📋 批量导入 URL 列表
+- 📊 下载进度实时显示
+- 🕘 下载历史记录，支持导出 CSV
+- 🎨 深色 / 浅色主题切换
+- 🔍 按状态筛选任务列表
 
 ## 安装
 
-### 方式一：直接运行 exe（Windows）
+### 方式一：直接运行 exe（推荐）
 
-从 [Releases](https://github.com/ZD0314/video-downloader/releases) 下载最新的 `视频下载器.exe`，双击运行。
+从 [Releases](https://github.com/ZD0314/video-downloader/releases) 下载最新的 `视频下载器.exe`，双击运行，无需安装 Python。
 
 ### 方式二：源码运行
 
 **环境要求：** Python 3.11+
 
 ```bash
-# 克隆项目
 git clone https://github.com/ZD0314/video-downloader.git
 cd video-downloader
-
-# 安装依赖
 pip install -r requirements.txt
-
-# 运行
 python src/main.py
 ```
 
-## 依赖
+## 使用说明
 
-```
-PyQt6
-yt-dlp
-```
-
-完整依赖见 [requirements.txt](requirements.txt)
+1. 粘贴视频 URL，点击下载
+2. 批量下载：**文件 → 导入 URL 列表**（每行一个 URL 的 .txt 文件）
+3. 修改下载路径：**文件 → 下载设置**
+4. 查看历史：**文件 → 下载记录**
+5. 导出记录：**文件 → 导出下载记录**
 
 ## 打包为 exe
 
@@ -63,34 +81,26 @@ pyinstaller --onefile --windowed --name "视频下载器" --add-data "src;src" s
 ```
 video-downloader/
 ├── src/
-│   ├── main.py                    # 入口
-│   ├── ui/                        # UI 层
-│   │   ├── main_window.py         # 主窗口
-│   │   ├── download_list.py       # 下载列表
-│   │   ├── download_item_widget.py# 下载项组件
-│   │   ├── url_input_widget.py    # URL 输入
-│   │   └── settings_dialog.py     # 设置对话框
-│   ├── services/                  # 服务层
-│   │   ├── download_manager.py    # 下载管理器
-│   │   ├── yt_dlp_wrapper.py      # yt-dlp 封装
-│   │   ├── video_parser.py        # 视频解析器
-│   │   ├── format_converter.py    # 格式转换（FFmpeg）
-│   │   └── config_manager.py      # 配置管理
+│   ├── main.py                     # 入口
+│   ├── ui/                         # UI 层
+│   │   ├── main_window.py          # 主窗口
+│   │   ├── download_list.py        # 下载列表
+│   │   ├── download_item_widget.py # 下载项组件
+│   │   ├── url_input_widget.py     # URL 输入
+│   │   └── settings_dialog.py      # 设置对话框
+│   ├── services/                   # 服务层
+│   │   ├── download_manager.py     # 下载管理器
+│   │   ├── yt_dlp_wrapper.py       # yt-dlp 封装
+│   │   ├── video_parser.py         # 视频解析器
+│   │   ├── format_converter.py     # 格式转换（FFmpeg）
+│   │   └── config_manager.py       # 配置管理
 │   └── models/
-│       └── download_task.py       # 下载任务模型
-├── tests/                         # 测试
-├── docs/                          # 文档
+│       └── download_task.py        # 下载任务模型
+├── tests/                          # 测试
+├── docs/                           # 文档
 └── requirements.txt
 ```
 
-## 使用说明
-
-1. 在输入框粘贴视频 URL，点击下载
-2. 批量下载：文件 → 导入 URL 列表（每行一个 URL 的 .txt 文件）
-3. 修改下载路径：文件 → 下载设置
-4. 查看历史：文件 → 下载记录
-5. 导出记录：文件 → 导出下载记录
-
 ## License
 
-MIT
+[MIT](LICENSE)
