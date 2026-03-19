@@ -15,6 +15,7 @@ class DownloadStatus(Enum):
 @dataclass
 class DownloadTask:
     """下载任务"""
+    task_id: str
     url: str
     title: str = ""
     status: DownloadStatus = DownloadStatus.WAITING

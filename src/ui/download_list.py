@@ -75,7 +75,7 @@ class DownloadListWidget(QWidget):
     def update_progress(self, task_id: str, downloaded: int, total: int, speed: str):
         """更新任务进度"""
         for task in self.tasks:
-            if task.url == task_id:
+            if task.task_id == task_id:
                 task.status = DownloadStatus.DOWNLOADING
                 task.downloaded_size = downloaded
                 task.total_size = total

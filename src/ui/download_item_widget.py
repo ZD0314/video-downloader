@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QProgressBar, QPushButton, QFrame
 )
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QColor
 from src.models.download_task import DownloadTask, DownloadStatus
 
 
@@ -27,65 +28,259 @@ class DownloadItemWidget(QWidget):
         # 主容器
         container = QFrame()
         container.setFrameStyle(QFrame.Shape.StyledPanel)
+        container.setStyleSheet("""
+            QFrame {
+                background-color: #f8f9fa;
+                border-radius: 5px;
+                border: 1px solid #e0e0e0;
+            }
+        """)
         container_layout = QHBoxLayout(container)
 
         # 标题和进度信息
         info_layout = QVBoxLayout()
-        title_label = QLabel(self.task.title or "正在解析...")
-        title_label.setStyleSheet("font-weight: bold;")
-        info_layout.addWidget(title_label)
+
+        # 标题行
+        title_layout = QHBoxLayout()
+        self.title_label = QLabel(self.task.title or "正在解析...")
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        title_layout.addWidget(self.title_label)
+        title_layout.addStretch()
+
+        # 状态标签
+        self.status_badge = QLabel(self.get_status_text())
+        self.status_badge.setStyleSheet("""
+            QLabel {
+                background-color: #e3f2fd;
+                color: #1976d2;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 11px;
+            }
+        """)
+        title_layout.addWidget(self.status_badge)
+        info_layout.addLayout(title_layout)
 
         # 进度条
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(self.task.progress)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                text-align: center;
+                height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #4caf50;
+                border-radius: 2px;
+            }
+        """)
         info_layout.addWidget(self.progress_bar)
 
-        # 状态信息
-        self.status_label = QLabel(self.get_status_text())
-        info_layout.addWidget(self.status_label)
+        # 详细信息
+        self.detail_label = QLabel(self.get_detail_text())
+        self.detail_label.setStyleSheet("font-size: 11px; color: #666;")
+        info_layout.addWidget(self.detail_label)
 
         container_layout.addLayout(info_layout, stretch=1)
 
         # 操作按钮
         btn_layout = QVBoxLayout()
+        btn_layout.setSpacing(3)
+
         self.pause_btn = QPushButton("暂停")
+        self.pause_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff9800;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #f57c00;
+            }
+        """)
+
+        self.resume_btn = QPushButton("恢复")
+        self.resume_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196f3;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #1976d2;
+            }
+        """)
+        self.resume_btn.setVisible(False)
+
         self.cancel_btn = QPushButton("取消")
+        self.cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+        """)
+
         btn_layout.addWidget(self.pause_btn)
+        btn_layout.addWidget(self.resume_btn)
         btn_layout.addWidget(self.cancel_btn)
+        btn_layout.addStretch()
         container_layout.addLayout(btn_layout)
 
         layout.addWidget(container)
 
         # 连接信号
         self.pause_btn.clicked.connect(self.on_pause_clicked)
+        self.resume_btn.clicked.connect(self.on_resume_clicked)
         self.cancel_btn.clicked.connect(self.on_cancel_clicked)
+
+        # 更新按钮状态和颜色
+        self.update_button_states()
+        self.update_status_color()
+
+    def update_button_states(self):
+        """根据任务状态更新按钮可见性"""
+        if self.task.status == DownloadStatus.DOWNLOADING:
+            self.pause_btn.setVisible(True)
+            self.resume_btn.setVisible(False)
+        elif self.task.status == DownloadStatus.PAUSED:
+            self.pause_btn.setVisible(False)
+            self.resume_btn.setVisible(True)
+        else:
+            self.pause_btn.setVisible(False)
+            self.resume_btn.setVisible(False)
+
+    def update_status_color(self):
+        """根据任务状态更新状态标签颜色"""
+        if self.task.status == DownloadStatus.DOWNLOADING:
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #e3f2fd;
+                    color: #1976d2;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
+        elif self.task.status == DownloadStatus.PAUSED:
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #fff3e0;
+                    color: #f57c00;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
+        elif self.task.status == DownloadStatus.COMPLETED:
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #e8f5e9;
+                    color: #388e3c;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
+        elif self.task.status == DownloadStatus.FAILED:
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #ffebee;
+                    color: #d32f2f;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
+        elif self.task.status == DownloadStatus.CANCELLED:
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #f5f5f5;
+                    color: #616161;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
+        else:  # WAITING
+            self.status_badge.setStyleSheet("""
+                QLabel {
+                    background-color: #f3e5f5;
+                    color: #7b1fa2;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                }
+            """)
 
     def get_status_text(self) -> str:
         """获取状态文本"""
         if self.task.status == DownloadStatus.DOWNLOADING:
-            return f"下载中... {self.task.progress}% | {self.task.speed}"
+            return "下载中"
+        elif self.task.status == DownloadStatus.PAUSED:
+            return "已暂停"
+        elif self.task.status == DownloadStatus.COMPLETED:
+            return "已完成"
+        elif self.task.status == DownloadStatus.FAILED:
+            return "失败"
+        elif self.task.status == DownloadStatus.CANCELLED:
+            return "已取消"
+        else:
+            return "等待中"
+
+    def get_detail_text(self) -> str:
+        """获取详细信息文本"""
+        if self.task.status == DownloadStatus.DOWNLOADING:
+            return f"{self.task.progress}% | {self.task.speed}"
         elif self.task.status == DownloadStatus.PAUSED:
             return f"已暂停 {self.task.progress}%"
         elif self.task.status == DownloadStatus.COMPLETED:
-            return "下载完成"
+            return f"完成 - {self._format_size(self.task.total_size)}"
         elif self.task.status == DownloadStatus.FAILED:
-            return f"下载失败: {self.task.error_message}"
+            return f"错误: {self.task.error_message}"
         else:
-            return "等待中..."
+            return "等待开始下载..."
+
+    def _format_size(self, size_bytes: int) -> str:
+        """格式化文件大小"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        else:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
 
     def update_progress(self, progress: int, total: int):
         """更新进度"""
         self.task.progress = progress
         self.task.total_size = total
         self.progress_bar.setValue(progress)
-        self.status_label.setText(self.get_status_text())
+        self.status_badge.setText(self.get_status_text())
+        self.detail_label.setText(self.get_detail_text())
+        self.update_button_states()
+        self.update_status_color()
 
     def on_pause_clicked(self):
         """暂停按钮点击"""
-        if self.task.status == DownloadStatus.DOWNLOADING:
-            self.pause_requested.emit(self.task)
-        else:
-            self.resume_requested.emit(self.task)
+        self.pause_requested.emit(self.task)
+
+    def on_resume_clicked(self):
+        """恢复按钮点击"""
+        self.resume_requested.emit(self.task)
 
     def on_cancel_clicked(self):
         """取消按钮点击"""

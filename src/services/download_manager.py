@@ -44,6 +44,7 @@ class DownloadManager(QObject):
 
         with QMutexLocker(self._mutex):
             task = DownloadTask(
+                task_id=task_id,
                 url=url,
                 title=title or url,
                 status=DownloadStatus.WAITING
@@ -171,6 +172,13 @@ class DownloadManager(QObject):
 
         self.task_failed.emit(task_id, error_message)
 
+    @pyqtSlot(str)
+    def _on_started(self, task_id: str):
+        """开始回调"""
+        with QMutexLocker(self._mutex):
+            if task_id in self._tasks:
+                self._tasks[task_id].status = DownloadStatus.DOWNLOADING
+
 
 class DownloadWorker(QRunnable):
     """下载工作线程"""
@@ -197,6 +205,13 @@ class DownloadWorker(QRunnable):
     def run(self):
         """执行下载"""
         try:
+            # 更新任务状态为下载中
+            QMetaObject.invokeMethod(
+                self.manager, "_on_started",
+                Qt.ConnectionType.QueuedConnection,
+                Q_ARG(str, self.task_id)
+            )
+            # 发射任务开始信号
             QMetaObject.invokeMethod(
                 self.manager, "task_started",
                 Qt.ConnectionType.QueuedConnection,

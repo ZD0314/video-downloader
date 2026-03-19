@@ -16,17 +16,17 @@ def test_download_list_widget_creation(app):
 def test_download_list_add_task(app):
     """测试添加下载任务"""
     widget = DownloadListWidget()
-    task = DownloadTask(url="https://example.com/video.mp4", title="测试视频")
+    task = DownloadTask(task_id="test123", url="https://example.com/video.mp4", title="测试视频")
     widget.add_task(task)
     assert widget.count() == 1
 
 def test_update_progress(app):
     """测试更新进度"""
     widget = DownloadListWidget()
-    task = DownloadTask(url="https://test.com/video", title="Test")
+    task = DownloadTask(task_id="test456", url="https://test.com/video", title="Test")
     widget.add_task(task)
 
-    widget.update_progress("https://test.com/video", 1024, 2048, "1.0 KB/s")
+    widget.update_progress("test456", 1024, 2048, "1.0 KB/s")
 
     assert task.downloaded_size == 1024
     assert task.total_size == 2048
