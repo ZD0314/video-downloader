@@ -1,7 +1,10 @@
 """下载管理器"""
+import logging
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QMutex, QMutexLocker, QMetaObject, Qt, Q_ARG
 from typing import Dict, Optional
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from src.services.yt_dlp_wrapper import YTDLPWrapper, YTDLPError
 from src.models.download_task import DownloadTask, DownloadStatus
@@ -194,7 +197,11 @@ class DownloadWorker(QRunnable):
     def run(self):
         """执行下载"""
         try:
-            self.manager.task_started.emit(self.task_id)
+            QMetaObject.invokeMethod(
+                self.manager, "task_started",
+                Qt.ConnectionType.QueuedConnection,
+                Q_ARG(str, self.task_id)
+            )
 
             def on_progress(data):
                 if self._cancelled:
@@ -228,6 +235,15 @@ class DownloadWorker(QRunnable):
             )
 
         except YTDLPError as e:
+            if not self._cancelled:
+                QMetaObject.invokeMethod(
+                    self.manager, "_on_failed",
+                    Qt.ConnectionType.QueuedConnection,
+                    Q_ARG(str, self.task_id),
+                    Q_ARG(str, str(e))
+                )
+        except Exception as e:
+            logger.exception("下载任务 %s 发生未预期错误", self.task_id)
             if not self._cancelled:
                 QMetaObject.invokeMethod(
                     self.manager, "_on_failed",
